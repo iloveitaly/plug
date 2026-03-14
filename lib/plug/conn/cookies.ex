@@ -3,6 +3,35 @@ defmodule Plug.Conn.Cookies do
   Conveniences for encoding and decoding cookies.
   """
 
+  @doc false
+  def sign_or_encrypt(%Plug.Conn{} = conn, key, value, opts) do
+    {sign?, opts} = Keyword.pop(opts, :sign, false)
+    {encrypt?, opts} = Keyword.pop(opts, :encrypt, false)
+
+    case {sign?, encrypt?} do
+      {true, true} ->
+        raise ArgumentError,
+              ":encrypt automatically implies :sign. Please pass only one or the other"
+
+      {true, false} ->
+        {Plug.Crypto.sign(conn.secret_key_base, key <> "_cookie", value, max_age(opts)), opts}
+
+      {false, true} ->
+        {Plug.Crypto.encrypt(conn.secret_key_base, key <> "_cookie", value, max_age(opts)), opts}
+
+      {false, false} when is_binary(value) ->
+        {value, opts}
+
+      {false, false} ->
+        raise ArgumentError, "cookie value must be a binary unless the cookie is signed/encrypted"
+    end
+  end
+
+  defp max_age(opts) do
+    max_age = Keyword.get(opts, :max_age) || 86400
+    [keys: Plug.Keys, max_age: max_age]
+  end
+
   @doc """
   Decodes the given cookies as given in either a request or response header.
 

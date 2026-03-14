@@ -1671,39 +1671,10 @@ defmodule Plug.Conn do
   def put_resp_cookie(%Conn{} = conn, key, value, opts \\ [])
       when is_binary(key) and is_list(opts) do
     %{resp_cookies: resp_cookies, scheme: scheme} = conn
-    {to_send_value, opts} = maybe_sign_or_encrypt_cookie(conn, key, value, opts)
+    {to_send_value, opts} = Plug.Conn.Cookies.sign_or_encrypt(conn, key, value, opts)
     cookie = [{:value, to_send_value} | opts] |> Map.new() |> maybe_secure_cookie(scheme)
     resp_cookies = Map.put(resp_cookies, key, cookie)
     update_cookies(%{conn | resp_cookies: resp_cookies}, &Map.put(&1, key, value))
-  end
-
-  @doc false
-  def maybe_sign_or_encrypt_cookie(%Conn{} = conn, key, value, opts) do
-    {sign?, opts} = Keyword.pop(opts, :sign, false)
-    {encrypt?, opts} = Keyword.pop(opts, :encrypt, false)
-
-    case {sign?, encrypt?} do
-      {true, true} ->
-        raise ArgumentError,
-              ":encrypt automatically implies :sign. Please pass only one or the other"
-
-      {true, false} ->
-        {Plug.Crypto.sign(conn.secret_key_base, key <> "_cookie", value, max_age(opts)), opts}
-
-      {false, true} ->
-        {Plug.Crypto.encrypt(conn.secret_key_base, key <> "_cookie", value, max_age(opts)), opts}
-
-      {false, false} when is_binary(value) ->
-        {value, opts}
-
-      {false, false} ->
-        raise ArgumentError, "cookie value must be a binary unless the cookie is signed/encrypted"
-    end
-  end
-
-  defp max_age(opts) do
-    max_age = Keyword.get(opts, :max_age) || 86400
-    [keys: Plug.Keys, max_age: max_age]
   end
 
   defp maybe_secure_cookie(cookie, :https), do: Map.put_new(cookie, :secure, true)

@@ -240,10 +240,7 @@ defmodule Plug.Test do
   def put_req_cookie(%Conn{} = conn, key, value, opts \\ [])
       when is_binary(key) and is_list(opts) do
     conn = delete_req_cookie(conn, key)
-    opts = Keyword.take(opts, [:max_age, :sign, :encrypt])
-
-    {to_send_value, _opts} = Conn.maybe_sign_or_encrypt_cookie(conn, key, value, opts)
-
+    {to_send_value, _opts} = Plug.Conn.Cookies.sign_or_encrypt(conn, key, value, opts)
     %{conn | req_headers: [{"cookie", "#{key}=#{to_send_value}"} | conn.req_headers]}
   end
 
