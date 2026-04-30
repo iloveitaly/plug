@@ -353,7 +353,13 @@ defmodule Plug.DebuggerTest do
     assert conn.resp_body =~ "hello://open?file=#{file}&amp;line=1"
 
     conn = stack([{GenServer, :call, 2, file: "lib/gen_server.ex", line: 10_000}])
-    file = Path.expand(GenServer.__info__(:compile)[:source])
+
+    file =
+      Path.expand(
+        GenServer.__info__(:compile)[:source] ||
+          raise("Elixir compiled without source information")
+      )
+
     assert conn.resp_body =~ "hello://open?file=#{file}&amp;line=10000"
   end
 
