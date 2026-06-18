@@ -289,6 +289,7 @@ defmodule Plug.Static do
          {range_start, range_end} <- start_and_end(bytes, file_size) do
       send_range(conn, path, range_start, range_end, file_size, options)
     else
+      :unsatisfiable -> send_unsatisfiable_range(conn, file_size, options)
       _ -> send_entire_file(conn, path, options)
     end
   end
@@ -296,6 +297,8 @@ defmodule Plug.Static do
   defp serve_range(conn, _file_info, path, _range, options) do
     send_entire_file(conn, path, options)
   end
+
+  defp start_and_end(_range, 0), do: :error
 
   defp start_and_end("-" <> rest, file_size) do
     case Integer.parse(rest) do
@@ -306,14 +309,17 @@ defmodule Plug.Static do
 
   defp start_and_end(range, file_size) do
     case Integer.parse(range) do
-      {first, "-"} when first >= 0 ->
+      {first, "-"} when first >= 0 and first < file_size ->
         {first, file_size - 1}
 
-      {first, "-" <> rest} when first >= 0 ->
+      {first, "-" <> rest} when first >= 0 and first < file_size ->
         case Integer.parse(rest) do
           {last, ""} when last >= first -> {first, min(last, file_size - 1)}
           _ -> :error
         end
+
+      {first, "-" <> _} when first >= file_size ->
+        :unsatisfiable
 
       _ ->
         :error
@@ -330,6 +336,14 @@ defmodule Plug.Static do
     conn
     |> put_resp_header("content-range", "bytes #{range_start}-#{range_end}/#{file_size}")
     |> send_file(206, path, range_start, length)
+    |> halt()
+  end
+
+  defp send_unsatisfiable_range(conn, file_size, options) do
+    conn
+    |> maybe_add_vary(options)
+    |> put_resp_header("content-range", "bytes */#{file_size}")
+    |> send_resp(416, "")
     |> halt()
   end
 

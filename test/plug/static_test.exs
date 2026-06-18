@@ -468,6 +468,52 @@ defmodule Plug.StaticTest do
       assert get_resp_header(conn, "content-type") == ["text/plain"]
     end
 
+    test "returns 416 if range start is past the end of the file" do
+      conn =
+        conn(:get, "/public/fixtures/static.txt", [])
+        |> put_req_header("range", "bytes=10-20")
+        |> call()
+
+      assert conn.status == 416
+      assert conn.resp_body == ""
+      assert get_resp_header(conn, "content-range") == ["bytes */5"]
+      assert get_resp_header(conn, "accept-ranges") == ["bytes"]
+    end
+
+    test "returns 416 if open-ended range start is past the end of the file" do
+      conn =
+        conn(:get, "/public/fixtures/static.txt", [])
+        |> put_req_header("range", "bytes=10-")
+        |> call()
+
+      assert conn.status == 416
+      assert get_resp_header(conn, "content-range") == ["bytes */5"]
+    end
+
+    test "returns 416 if range start equals the file size" do
+      for range <- ["bytes=5-", "bytes=5-9"] do
+        conn =
+          conn(:get, "/public/fixtures/static.txt", [])
+          |> put_req_header("range", range)
+          |> call()
+
+        assert conn.status == 416, "expected 416 for #{range}"
+        assert get_resp_header(conn, "content-range") == ["bytes */5"]
+      end
+    end
+
+    test "ignores range and serves the file when it is zero bytes" do
+      for range <- ["bytes=0-", "bytes=1-", "bytes=10-20"] do
+        conn =
+          conn(:get, "/public/fixtures/empty.txt", [])
+          |> put_req_header("range", range)
+          |> call()
+
+        assert conn.status == 200, "expected 200 for #{range}"
+        assert conn.resp_body == ""
+      end
+    end
+
     test "performs etag negotiation" do
       conn =
         conn(:get, "/public/fixtures/static.txt")
