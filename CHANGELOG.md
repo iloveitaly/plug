@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.20.1 (2026-06-23)
+
+### Bug fixes
+
+  * [Plug.Conn] Fix `inform`/`inform!` when atoms are given as header keys
+
 ## v1.20.0 (2026-06-23)
 
 This release requires Elixir v1.15+.

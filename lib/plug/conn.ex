@@ -1386,7 +1386,7 @@ defmodule Plug.Conn do
   proxies require it to support server push for HTTP/2. You can call
   `get_http_protocol/1` to retrieve the protocol and version.
   """
-  @spec inform(t, status, Keyword.t()) :: t
+  @spec inform(t, status, [{atom() | binary(), binary()}]) :: t
   def inform(%Conn{adapter: {adapter, _}} = conn, status, headers \\ []) do
     status_code = Plug.Conn.Status.code(status)
 
@@ -1407,7 +1407,7 @@ defmodule Plug.Conn do
 
   See `inform/3` for more information.
   """
-  @spec inform!(t, status, Keyword.t()) :: t
+  @spec inform!(t, status, [{atom() | binary(), binary()}]) :: t
   def inform!(%Conn{adapter: {adapter, _}} = conn, status, headers \\ []) do
     status_code = Plug.Conn.Status.code(status)
 
