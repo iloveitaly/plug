@@ -1436,6 +1436,10 @@ defmodule Plug.Conn do
   end
 
   defp adapter_inform(%Conn{adapter: {adapter, payload}}, status, headers) do
+    for {key, value} <- headers do
+      validate_header_key_value!(key, value)
+    end
+
     adapter.inform(payload, status, headers)
   end
 
